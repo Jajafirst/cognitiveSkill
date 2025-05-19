@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Cognitive Skill Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #fffae6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .flag-toggle {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .flag-toggle img {
+            width: 36px;
+            height: 24px;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .quiz-container {
+            max-width: 800px;
+            margin: auto;
+        }
+
+        .question-card {
+            background-color: #ffffff;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .question-card h3 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .answer-buttons {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+        }
+
+        .answer-buttons label {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background-color: #ffe57e;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .answer-buttons input {
+            display: none;
+        }
+
+        .answer-buttons input:checked+label {
+            background-color: #ffcc4d;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 15px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 10px;
+            background-color: #4caf50;
+            color: white;
+            cursor: pointer;
+        }
+
+        canvas {
+            margin-top: 40px;
+            max-width: 100%;
+        }
+
+        #resultText {
+            margin-top: 25px;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 20px 16px 12px 16px;
+            /* top padding increased for label space */
+            border: 2px solid #ffe57e;
+            border-radius: 16px;
+            font-size: 1rem;
+            background-color: #fffdf5;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+        }
+
+        .input-group input:focus {
+            border-color: #ffe57e;
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+            outline: none;
+        }
+
+        .input-group label {
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            padding: 0 6px;
+            background-color: #fffdf5;
+            color: #000;
+            font-size: 0.95rem;
+            pointer-events: none;
+            transition: 0.2s ease all;
+            border-radius: 4px;
+        }
+
+        .input-group input:not(:placeholder-shown)+label {
+            top: -8px;
+            left: 12px;
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #000;
+        }
+    </style>
+</head>
+
+<body onload="renderQuestions()">
+    <div class="quiz-container">
+        <div class="flag-toggle">
+            <img src="https://flagcdn.com/th.svg" onclick="switchLang('thai')" title="Thai" />
+            <img src="https://flagcdn.com/gb.svg" onclick="switchLang('eng')" title="English" />
+        </div>
+        <div class="student-info question-card">
+            <h3 id="infoTitle" style="margin-bottom: 15px;">Please fill in your information:</h3>
+
+            <div class="input-group">
+                <input type="text" id="studentId" required placeholder=" " />
+                <label for="studentId" id="label-studentId">Student ID</label>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="name" required placeholder=" " />
+                <label for="name" id="label-name">Name</label>
+            </div>
+
+            <div class="input-group">
+                <input type="number" id="age" required placeholder=" " />
+                <label for="age" id="label-age">Age</label>
+            </div>
+
+            <div class="input-group">
+                <input type="text" id="school" required placeholder=" " />
+                <label for="school" id="label-school">School</label>
+            </div>
+        </div>
+
+        <h1 style="text-align: center;">Welcome!, Cognitive Skill Test</h1>
+
+        <form id="quizForm"></form>
+        <button type="button" onclick="displayRadarChart()">Submit</button>
+        <canvas id="skillChart" width="300" height="300"></canvas>
+        <div id="resultText"></div>
+    </div>
+
+    <script>
+        const langLabels = {
+            eng: {
+                title: "Please fill in your information:",
+                studentId: "Student ID",
+                name: "Name",
+                age: "Age",
+                school: "School"
+            },
+            thai: {
+                title: "กรุณากรอกข้อมูลนักเรียน:",
+                studentId: "รหัสนักเรียน",
+                name: "ชื่อ",
+                age: "อายุ",
+                school: "โรงเรียน"
+            }
+        };
+
+        const questions = {
+            eng: [
+                { q: "Roses are flowers. Some flowers fade quickly. Do all roses fade quickly?", a1: "No", a2: "Yes", key: "logic" },
+                { q: "What is 20% of 50?", a1: "10", a2: "15", key: "math" },
+                { q: "What do you do if stuck on a puzzle?", a1: "Analyze it", a2: "Quit", key: "problem" },
+                { q: "Find the typo: 'She go to school.'", a1: "Error", a2: "No error", key: "detail" },
+                { q: "Next in the series: 3, 6, 9, ?", a1: "12", a2: "11", key: "abstract" },
+                { q: "A square is always a rectangle. True?", a1: "Yes", a2: "No", key: "logic2" },
+                { q: "Half of 3/4?", a1: "3/8", a2: "1/2", key: "math2" },
+                { q: "How to handle hard tasks?", a1: "Split them", a2: "Skip them", key: "problem2" },
+                { q: "Error? 'There is five books.'", a1: "Error", a2: "No error", key: "detail2" },
+                { q: "Next number: 1, 1, 2, 3, 5, ?", a1: "8", a2: "7", key: "abstract2" }
+            ],
+            thai: [
+                { q: "กุหลาบคือดอกไม้ ดอกไม้บางชนิดร่วงโรยเร็ว แปลว่ากุหลาบทั้งหมดร่วงโรยเร็วหรือไม่?", a1: "ไม่ใช่", a2: "ใช่", key: "logic" },
+                { q: "20% ของ 50 คือเท่าไหร่?", a1: "10", a2: "15", key: "math" },
+                { q: "ถ้าคุณติดอยู่กับปริศนา ควรทำอย่างไร?", a1: "วิเคราะห์", a2: "ยอมแพ้", key: "problem" },
+                { q: "หาคำผิด: 'She go to school.'", a1: "มีข้อผิดพลาด", a2: "ไม่มีข้อผิดพลาด", key: "detail" },
+                { q: "ลำดับถัดไป: 3, 6, 9, ?", a1: "12", a2: "11", key: "abstract" },
+                { q: "สี่เหลี่ยมจัตุรัสเป็นสี่เหลี่ยมผืนผ้าเสมอ ใช่หรือไม่?", a1: "ใช่", a2: "ไม่ใช่", key: "logic2" },
+                { q: "ครึ่งหนึ่งของ 3/4 คือ?", a1: "3/8", a2: "1/2", key: "math2" },
+                { q: "จะรับมือกับงานยากได้อย่างไร?", a1: "แบ่งเป็นส่วนย่อย", a2: "ข้ามไป", key: "problem2" },
+                { q: "ประโยคนี้ผิดหรือไม่? 'There is five books.'", a1: "มีข้อผิดพลาด", a2: "ไม่มีข้อผิดพลาด", key: "detail2" },
+                { q: "ตัวเลขถัดไป: 1, 1, 2, 3, 5, ?", a1: "8", a2: "7", key: "abstract2" }
+            ]
+        };
+
+        function triggerFloatingLabels() {
+            const inputs = document.querySelectorAll(".input-group input");
+            inputs.forEach(input => {
+                if (input.value.trim() !== "") {
+                    input.classList.add("has-value");
+                } else {
+                    input.classList.remove("has-value");
+                }
+            });
+        }
+        let currentLang = "eng";
+
+        function switchLang(lang) {
+            currentLang = lang;
+            renderQuestions();
+            document.getElementById("resultText").innerHTML = "";
+            if (chartInstance) chartInstance.destroy();
+
+            const labels = langLabels[lang];
+            document.getElementById("infoTitle").innerText = labels.title;
+            document.getElementById("studentId").placeholder = " ";
+            document.getElementById("name").placeholder = " ";
+            document.getElementById("age").placeholder = " ";
+            document.getElementById("school").placeholder = " ";
+
+            document.getElementById("label-studentId").innerText = labels.studentId;
+            document.getElementById("label-name").innerText = labels.name;
+            document.getElementById("label-age").innerText = labels.age;
+            document.getElementById("label-school").innerText = labels.school;
+
+            triggerFloatingLabels(); // ✅ force update floating labels
+        }
+
+        function renderQuestions() {
+            const container = document.getElementById("quizForm");
+            container.innerHTML = "";
+            questions[currentLang].forEach((item, index) => {
+                container.innerHTML += `
+                    <div class="question-card">
+                        <h3>${index + 1}. ${item.q}</h3>
+                        <div class="answer-buttons">
+                            <input type="radio" id="${item.key}1" name="${item.key}" value="1">
+                            <label for="${item.key}1">${item.a1}</label>
+                            <input type="radio" id="${item.key}0" name="${item.key}" value="0">
+                            <label for="${item.key}0">${item.a2}</label>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        let chartInstance = null;
+
+        function getVal(name) {
+            return parseInt(document.querySelector(`input[name='${name}']:checked`).value);
+        }
+        function displayRadarChart() {
+            const keys = ['logic', 'logic2', 'math', 'math2', 'problem', 'problem2', 'detail', 'detail2', 'abstract', 'abstract2'];
+            for (let key of keys) {
+                if (!document.querySelector(`input[name='${key}']:checked`)) {
+                    alert(currentLang === 'thai' ? 'กรุณาตอบคำถามให้ครบ' : 'Please answer all questions.');
+                    return;
+                }
+            }
+
+            const skillValues = [
+                (getVal('logic') + getVal('logic2')) / 2,
+                (getVal('math') + getVal('math2')) / 2,
+                (getVal('problem') + getVal('problem2')) / 2,
+                (getVal('detail') + getVal('detail2')) / 2,
+                (getVal('abstract') + getVal('abstract2')) / 2
+            ];
+
+            const data = {
+                studentId: document.getElementById("studentId").value,
+                name: document.getElementById("name").value,
+                age: document.getElementById("age").value,
+                school: document.getElementById("school").value,
+                language: currentLang,
+                logic: skillValues[0],
+                math: skillValues[1],
+                problem: skillValues[2],
+                attention: skillValues[3],
+                abstract: skillValues[4],
+                logicRate: getRate(skillValues[0]),
+                mathRate: getRate(skillValues[1]),
+                problemRate: getRate(skillValues[2]),
+                attentionRate: getRate(skillValues[3]),
+                abstractRate: getRate(skillValues[4])
+            };
+
+            sendToGoogleForm(data);
+
+            const ctx = document.getElementById("skillChart").getContext("2d");
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: "radar",
+                data: {
+                    labels: ["Logic", "Math", "Problem-solving", "Detail", "Abstract"],
+                    datasets: [{
+                        label: "Cognitive Skills",
+                        data: skillValues,
+                        backgroundColor: "rgba(255, 206, 86, 0.2)",
+                        borderColor: "rgba(255, 206, 86, 1)",
+                        pointBackgroundColor: "rgba(255, 206, 86, 1)"
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            min: 0,
+                            max: 1,
+                            ticks: { stepSize: 0.5 }
+                        }
+                    }
+                }
+            });
+
+            if (currentLang === 'thai') {
+                generateThaiResult(skillValues);
+            } else {
+                generateEngResult(skillValues);
+            }
+        }
+
+        // Generate result text after sending
+        if (currentLang === 'thai') {
+            generateThaiResult(skillValues);
+        } else {
+            generateEngResult(skillValues);
+        }
+
+
+        // show the correct result text
+        if (currentLang === 'thai') {
+            generateThaiResult(skillValues);
+        } else {
+            generateEngResult(skillValues);
+        }
+        function getRate(val) {
+            if (val >= 0.8) return "⭐ Excellent";
+            else if (val >= 0.5) return "🟡 Moderate";
+            else return "🐣 Needs Practice";
+        }
+
+        // 💬 Place these outside so they can be called globally
+        function generateEngResult(skillValues) {
+            let resultHTML = "<h4>Skill Analysis & Suggestions:</h4><ul>";
+
+            if (skillValues[2] >= 0.8) {
+                resultHTML += "<li><strong>Problem-Solving:</strong> ⭐ Excellent - You excel at breaking down problems into clear steps. Keep challenging yourself with algorithm questions (like LeetCode/Easy problems), and try building apps that involve step-based logic such as a To-Do app, Calculator, or a simple Quiz Game.</li>";
+            } else if (skillValues[2] >= 0.5) {
+                resultHTML += "<li><strong>Problem-Solving:</strong> 🟡 Moderate - You have good potential! Focus on small coding challenges that require multiple steps, like list sorting, basic search algorithms, or simple math games. Build confidence with daily exercises.</li>";
+            } else {
+                resultHTML += "<li><strong>Problem-Solving:</strong> 🐣 Needs practice - Start by writing down problem steps before coding. Do simple tasks like summing numbers or finding the largest number in a list. Practice debugging step-by-step to build your skills.</li>";
+            }
+
+            if (skillValues[4] >= 0.8) {
+                resultHTML += "<li><strong>Abstract Thinking:</strong> ⭐ Excellent  - You are great at spotting patterns! Take it further with nested loops, pattern printing (like triangles or number pyramids), and work with basic data structures (lists, dictionaries). Challenge: Write Fibonacci and Prime number checkers in Python.</li>";
+            } else if (skillValues[4] >= 0.5) {
+                resultHTML += "<li><strong>Abstract Thinking:</strong> 🟡 Moderate - You can recognize basic patterns. Practice loops that create patterns (e.g., stars, sequences) and solve pattern puzzles like 'FizzBuzz' or simple grid problems.</li>";
+            } else {
+                resultHTML += "<li><strong>Abstract Thinking:</strong> 🐣 Needs practice - Focus on understanding simple number patterns, and practice basic for-loops and while-loops. Start with tasks like printing numbers 1–10 or creating a small multiplication table.</li>";
+            }
+
+            if (skillValues[1] >= 0.8) {
+                resultHTML += "<li><strong>Math:</strong> ⭐ Excellent - You are confident with numbers and formulas. Try making real-world apps like a Shopping Cart (with discounts), BMI Calculator, or a Currency Converter. Explore Python’s math library for advanced functions!</li>";
+            } else if (skillValues[1] >= 0.5) {
+                resultHTML += "<li><strong>Math:</strong> 🟡 Moderate - You’re comfortable with basics. Keep working on applying math using variables, percentages, and basic formulas (e.g., tax, interest calculators). Build small tools to solve daily math problems.</li>";
+            } else {
+                resultHTML += "<li><strong>Math:</strong> 🐣 Needs practice - Start with writing and using variables in Python. Practice simple addition, subtraction, and percentage tasks (e.g., how much is 20% off a price?).</li>";
+            }
+
+            if (skillValues[0] >= 0.8) {
+                resultHTML += "<li><strong>Logical Thinking:</strong> ⭐ Excellent - You’re good at making decisions with If-else and control flow. Try making apps that involve conditions like a Login Form, Rock-Paper-Scissors game, or Age Checker. Challenge: Build a simple authentication system with error handling.</li>";
+            } else if (skillValues[0] >= 0.5) {
+                resultHTML += "<li><strong>Logical Thinking:</strong> 🟡 Moderate - You understand logic basics. Keep practicing If-else, nested conditions, and simple decision-making problems. Projects: Guess the Number game, or basic calculators.</li>";
+            } else {
+                resultHTML += "<li><strong>Logical Thinking:</strong> 🐣 Needs practic - Work on If-else basics and while-loops. Use flowcharts to help plan before coding. Start with True/False quizzes and simple “Is this number even/odd?” tasks.</li>";
+            }
+
+            if (skillValues[3] >= 0.8) {
+                resultHTML += "<li><strong>Attention to Detail:</strong> ⭐ Excellent - You are careful and precise. Keep improving by learning Clean Code principles, adding meaningful comments, and reviewing other people's code to sharpen your debugging skills.</li>";
+            } else if (skillValues[3] >= 0.5) {
+                resultHTML += "<li><strong>Attention to Detail:</strong> 🟡 Moderate - You’re doing well, but remember to double-check syntax, indentation, and error messages. Good practice: Debug small scripts and review code for minor mistakes.</li>";
+            } else {
+                resultHTML += "<li><strong>Attention to Detail:</strong> 🐣 Needs practic - Focus on spotting common errors (like missing colons, wrong indentations). Practice: Copy small scripts and try to intentionally break/fix them to get familiar with error messages.</li>";
+            }
+
+            resultHTML += "</ul>";
+
+            const highCount = skillValues.filter(val => val >= 0.8).length;
+            const allLow = skillValues.every(val => val < 0.5);
+
+            if (highCount >= 3) {
+                resultHTML += "<p><strong>💡 Strength:</strong> You’re strong in multiple areas! Push yourself to build full projects like a personal website, game, or a data analysis mini project. Remember: real-world practice will sharpen your skills fast.</p>";
+            } else if (allLow) {
+                resultHTML += "<p><strong>💡 Starting Point:</strong> You are at the beginning of your Python journey—awesome start! Focus on building a solid foundation: variables, loops, and If-else. Set a goal to practice 20 minutes daily to boost your confidence.</p>";
+            } else {
+                resultHTML += "<p><strong>💡 Mixed Skills:</strong> You have strengths and also areas to work on. Keep reinforcing your stronger skills while balancing time to strengthen your weak spots. Mini projects + daily problem-solving will help you grow steadily!</p>";
+            }
+
+            document.getElementById("resultText").innerHTML = resultHTML;
+        }
+
+        function generateThaiResult(skillValues) {
+            let resultHTML = "<h4>🧠 การวิเคราะห์ทักษะและข้อแนะนำเฉพาะตัว:</h4><ul>";
+
+            // Problem-solving
+            if (skillValues[2] >= 0.8) {
+                resultHTML += "<li><strong>🧩 การแก้ปัญหา:</strong> ⭐ ยอดเยี่ยม! คุณสามารถวิเคราะห์และแก้ปัญหาได้อย่างมีระบบ มีแนวโน้มจะประสบความสำเร็จในการเขียนโปรแกรมหรือทำโปรเจกต์เชิงตรรกะ แนะนำให้ลองฝึกโจทย์แบบ LeetCode ง่าย ๆ หรือลองสร้างแอปเล็ก ๆ ที่มีหลายขั้นตอน เช่น เครื่องคิดเลข To-Do List หรือเกมตอบคำถาม นอกจากนี้ ลองหัดเขียนแผนภาพ flowchart ก่อนเขียนโค้ดจริงเพื่อยกระดับความเข้าใจอีกขั้น</li>";
+            } else if (skillValues[2] >= 0.5) {
+                resultHTML += "<li><strong>🧩 การแก้ปัญหา:</strong> 🟡 ปานกลาง คุณเริ่มเข้าใจการแก้ปัญหาได้ดี แต่ยังมีช่องว่างในการฝึกฝน ลองหัดแก้ปัญหาที่ต้องแบ่งเป็นหลายขั้นตอน เช่น การคำนวณภาษีหรือเรียงลำดับตัวเลข ลองสร้างเกมจับคู่ การจัดการตะกร้าสินค้า หรือระบบคะแนนง่าย ๆ เพื่อฝึกทักษะแบบค่อยเป็นค่อยไป</li>";
+            } else {
+                resultHTML += "<li><strong>🧩 การแก้ปัญหา:</strong> 🐣 ยังต้องฝึกฝน แนะนำให้เริ่มจากการอธิบายโจทย์ด้วยคำพูดของตัวเอง แล้วเขียนลำดับขั้นตอนการแก้ปัญหา ก่อนลงมือเขียนโค้ดจริง ฝึกโจทย์ง่าย ๆ เช่น การหาค่าสูงสุดในลิสต์ รวมเลข หรือแปลงองศาเป็นฟาเรนไฮต์</li>";
+            }
+
+            // Abstract Thinking
+            if (skillValues[4] >= 0.8) {
+                resultHTML += "<li><strong>🔍 ความคิดเชิงนามธรรม:</strong> ⭐ ยอดเยี่ยม! คุณสามารถสังเกตรูปแบบและแนวโน้มได้ดีมาก เป็นพื้นฐานที่ดีสำหรับการวิเคราะห์ข้อมูล และเขียนอัลกอริธึมซับซ้อน ลองฝึกทำ pattern printing ด้วย loop ซ้อน เช่น พีระมิดตัวเลข ลวดลายสามเหลี่ยม ลองแก้ปัญหาเชิงตรรกะอย่าง FizzBuzz หรือเกม Sudoku</li>";
+            } else if (skillValues[4] >= 0.5) {
+                resultHTML += "<li><strong>🔍 ความคิดเชิงนามธรรม:</strong> 🟡 ปานกลาง คุณสามารถจับลวดลายพื้นฐานได้ดี ลองฝึกโจทย์ที่ต้องใช้ for-loop และ while-loop เพื่อพิมพ์ลวดลายต่าง ๆ เช่น สร้างนาฬิกาดิจิทัล หรือสร้างภาพจิ๊กซอว์เล็ก ๆ ด้วยอักขระ</li>";
+            } else {
+                resultHTML += "<li><strong>🔍 ความคิดเชิงนามธรรม:</strong> 🐣 ยังต้องฝึกฝน เริ่มจากฝึกพิมพ์เลข 1–10, ตารางคูณ และเข้าใจแนวคิดลำดับ เช่น Fibonacci หรือการเรียงเลขแบบ Bubble Sort</li>";
+            }
+
+            // Math
+            if (skillValues[1] >= 0.8) {
+                resultHTML += "<li><strong>➗ คณิตศาสตร์:</strong> ⭐ ยอดเยี่ยม! เก่งเรื่องตัวเลข! คุณสามารถใช้สูตรและการคำนวณได้อย่างมั่นใจ ลองประยุกต์ใช้กับโปรเจกต์จริง เช่น โปรแกรมคำนวณเกรด, เครื่องแปลงสกุลเงิน, หรือระบบคำนวณค่าส่งสินค้า พร้อมทั้งศึกษาฟังก์ชันในไลบรารี Math ของ Python เช่น sqrt(), pow()</li>";
+            } else if (skillValues[1] >= 0.5) {
+                resultHTML += "<li><strong>➗ คณิตศาสตร์:</strong> 🟡 ปานกลาง คุณมีความเข้าใจในพื้นฐาน เช่น บวก ลบ คูณ หาร และร้อยละได้ ลองสร้างแอปง่าย ๆ เช่น ตัวคำนวณส่วนลด หรือระบบเงินเดือน พร้อมเรียนรู้การจัดการตัวแปรและสูตรในโปรแกรม</li>";
+            } else {
+                resultHTML += "<li><strong>➗ คณิตศาสตร์:</strong> 🐣 ยังต้องฝึกฝน ควรเริ่มต้นจากพื้นฐาน เช่น ใช้ Python คำนวณเลขง่าย ๆ เรียนรู้การใช้ตัวแปร สร้างสูตร และทำแบบฝึกหัดเกี่ยวกับการหารเปอร์เซ็นต์ การจัดการเงิน หรือคำนวณวันครบกำหนด</li>";
+            }
+
+            // Logic
+            if (skillValues[0] >= 0.8) {
+                resultHTML += "<li><strong>🧠 ตรรกะ:</strong> ⭐ ยอดเยี่ยม! คุณสามารถใช้ If-else, switch-case และ loop ได้อย่างมั่นใจ ลองสร้างระบบที่ต้องใช้การตัดสินใจ เช่น ระบบล็อกอิน การตรวจสอบอายุ หรือเกมทายตัวเลข เพิ่ม challenge ด้วยระบบตรวจสอบความถูกต้อง เช่น ถ้าพาสเวิร์ดไม่ตรงให้แสดง Error</li>";
+            } else if (skillValues[0] >= 0.5) {
+                resultHTML += "<li><strong>🧠 ตรรกะ:</strong> 🟡 ปานกลาง คุณเข้าใจแนวคิดเงื่อนไขพื้นฐานได้ดี ลองฝึกเพิ่มด้วยการเขียนเงื่อนไขซ้อนกัน และฝึกเขียน loop ร่วมกับ If-else เช่น ระบบเช็คคะแนนสอบ หรือเกมทายผลลัพธ์เลข</li>";
+            } else {
+                resultHTML += "<li><strong>🧠 ตรรกะ:</strong> 🐣 ยังต้องฝึกฝน เริ่มจากการฝึกใช้ If-else แบบง่าย และวาด flowchart เพื่อวางแผนก่อนเขียนโค้ด เช่น เกมเป่ายิ้งฉุบ หรือโปรแกรมตรวจสอบว่าตัวเลขเป็นเลขคู่หรือเลขคี่</li>";
+            }
+
+            // Attention to Detail
+            if (skillValues[3] >= 0.8) {
+                resultHTML += "<li><strong>🧐 ความละเอียด:</strong> ⭐ยอดเยี่ยม! คุณมีสายตาเฉียบคม ตรวจสอบโค้ดได้ดี ลองฝึกเขียนโค้ดที่อ่านง่าย เช่น ตั้งชื่อตัวแปรให้ชัดเจน ใส่คอมเมนต์ให้ผู้อื่นเข้าใจ และลองรีวิวโค้ดของเพื่อน ๆ เพื่อพัฒนาเพิ่มเติม</li>";
+            } else if (skillValues[3] >= 0.5) {
+                resultHTML += "<li><strong>🧐 ความละเอียด:</strong> 🟡 ปานกลาง ควรฝึกให้ชินกับ syntax, indentation และ error message ที่พบบ่อย ฝึกเขียนโปรแกรมที่มีข้อผิดพลาดแล้วลอง debug แก้ไขทีละจุด</li>";
+            } else {
+                resultHTML += "<li><strong>🧐 ความละเอียด:</strong> 🐣 ยังต้องฝึกฝน เริ่มจากสังเกตข้อผิดพลาดที่พบบ่อย เช่น ลืม colon, วางโค้ดผิด indentation หรือใช้ตัวแปรผิดชื่อ แล้วลองแก้ด้วยตนเอง</li>";
+            }
+
+            resultHTML += "</ul>";
+
+            // Final summary
+            const highCount = skillValues.filter(val => val >= 0.8).length;
+            const allLow = skillValues.every(val => val < 0.5);
+
+            if (highCount >= 3) {
+                resultHTML += "<p><strong>💪 จุดแข็งของคุณ:</strong> คุณมีทักษะโดดเด่นหลายด้าน! ลองต่อยอดด้วยการสร้างเว็บไซต์ส่วนตัว เกมง่าย ๆ หรือแอปที่มีฟีเจอร์หลากหลาย เช่น ระบบล็อกอิน ระบบค้นหา หรือระบบคำนวณ</p>";
+            } else if (allLow) {
+                resultHTML += "<p><strong>🚀 จุดเริ่มต้นที่ดี:</strong> ถึงจะยังใหม่ แต่คุณได้เริ่มต้นแล้ว! เน้นการเรียนรู้พื้นฐานให้แน่น เช่น ตัวแปร ลูป If-else และสร้างโค้ดสั้น ๆ ทุกวันวันละ 20 นาที</p>";
+            } else {
+                resultHTML += "<p><strong>📈 มีพัฒนาการ:</strong> คุณมีทั้งจุดแข็งและจุดที่ต้องเสริม ลองสร้างมินิโปรเจกต์เพื่อฝึกจริง เช่น เกมทายเลข หรือระบบนับคะแนน พร้อมปรับจุดอ่อนไปด้วย</p>";
+            }
+
+            document.getElementById("resultText").innerHTML = resultHTML;
+        }
+
+        function getPlainThaiFeedback(val, type) {
+            const map = {
+                problem: {
+                    1: "คุณสามารถวิเคราะห์และแก้ปัญหาได้อย่างมีระบบ มีแนวโน้มจะประสบความสำเร็จในการเขียนโปรแกรมหรือทำโปรเจกต์เชิงตรรกะ แนะนำให้ลองฝึกโจทย์แบบ LeetCode ง่าย ๆ หรือลองสร้างแอปเล็ก ๆ ที่มีหลายขั้นตอน เช่น เครื่องคิดเลข To-Do List หรือเกมตอบคำถาม นอกจากนี้ ลองหัดเขียนแผนภาพ flowchart ก่อนเขียนโค้ดจริงเพื่อยกระดับความเข้าใจอีกขั้น",
+                    0.5: "คุณเริ่มเข้าใจการแก้ปัญหาได้ดี แต่ยังมีช่องว่างในการฝึกฝน ลองหัดแก้ปัญหาที่ต้องแบ่งเป็นหลายขั้นตอน เช่น การคำนวณภาษีหรือเรียงลำดับตัวเลข ลองสร้างเกมจับคู่ การจัดการตะกร้าสินค้า หรือระบบคะแนนง่าย ๆ เพื่อฝึกทักษะแบบค่อยเป็นค่อยไป",
+                    0: "แนะนำให้เริ่มจากการอธิบายโจทย์ด้วยคำพูดของตัวเอง แล้วเขียนลำดับขั้นตอนการแก้ปัญหา ก่อนลงมือเขียนโค้ดจริง ฝึกโจทย์ง่าย ๆ เช่น การหาค่าสูงสุดในลิสต์ รวมเลข หรือแปลงองศาเป็นฟาเรนไฮต์"
+                },
+                abstract: {
+                    1: "คุณสามารถสังเกตรูปแบบและแนวโน้มได้ดีมาก เป็นพื้นฐานที่ดีสำหรับการวิเคราะห์ข้อมูล และเขียนอัลกอริธึมซับซ้อน ลองฝึกทำ pattern printing ด้วย loop ซ้อน เช่น พีระมิดตัวเลข ลวดลายสามเหลี่ยม ลองแก้ปัญหาเชิงตรรกะอย่าง FizzBuzz หรือเกม Sudoku",
+                    0.5: "คุณสามารถจับลวดลายพื้นฐานได้ดี ลองฝึกโจทย์ที่ต้องใช้ for-loop และ while-loop เพื่อพิมพ์ลวดลายต่าง ๆ เช่น สร้างนาฬิกาดิจิทัล หรือสร้างภาพจิ๊กซอว์เล็ก ๆ ด้วยอักขระ",
+                    0: "เริ่มจากฝึกพิมพ์เลข 1–10, ตารางคูณ และเข้าใจแนวคิดลำดับ เช่น Fibonacci หรือการเรียงเลขแบบ Bubble Sort"
+                },
+                math: {
+                    1: "เก่งเรื่องตัวเลข! คุณสามารถใช้สูตรและการคำนวณได้อย่างมั่นใจ ลองประยุกต์ใช้กับโปรเจกต์จริง เช่น โปรแกรมคำนวณเกรด, เครื่องแปลงสกุลเงิน, หรือระบบคำนวณค่าส่งสินค้า พร้อมทั้งศึกษาฟังก์ชันในไลบรารี Math ของ Python เช่น sqrt(), pow()",
+                    0.5: "คุณมีความเข้าใจในพื้นฐาน เช่น บวก ลบ คูณ หาร และร้อยละได้ ลองสร้างแอปง่าย ๆ เช่น ตัวคำนวณส่วนลด หรือระบบเงินเดือน พร้อมเรียนรู้การจัดการตัวแปรและสูตรในโปรแกรม",
+                    0: "ควรเริ่มต้นจากพื้นฐาน เช่น ใช้ Python คำนวณเลขง่าย ๆ เรียนรู้การใช้ตัวแปร สร้างสูตร และทำแบบฝึกหัดเกี่ยวกับการหารเปอร์เซ็นต์ การจัดการเงิน หรือคำนวณวันครบกำหนด"
+                },
+                logical: {
+                    1: "คุณสามารถใช้ If-else, switch-case และ loop ได้อย่างมั่นใจ ลองสร้างระบบที่ต้องใช้การตัดสินใจ เช่น ระบบล็อกอิน การตรวจสอบอายุ หรือเกมทายตัวเลข เพิ่ม challenge ด้วยระบบตรวจสอบความถูกต้อง เช่น ถ้าพาสเวิร์ดไม่ตรงให้แสดง Error",
+                    0.5: "คุณเข้าใจแนวคิดเงื่อนไขพื้นฐานได้ดี ลองฝึกเพิ่มด้วยการเขียนเงื่อนไขซ้อนกัน และฝึกเขียน loop ร่วมกับ If-else เช่น ระบบเช็คคะแนนสอบ หรือเกมทายผลลัพธ์เลข",
+                    0: "เริ่มจากการฝึกใช้ If-else แบบง่าย และวาด flowchart เพื่อวางแผนก่อนเขียนโค้ด เช่น เกมเป่ายิ้งฉุบ หรือโปรแกรมตรวจสอบว่าตัวเลขเป็นเลขคู่หรือเลขคี่"
+                },
+                attention: {
+                    1: "คุณมีสายตาเฉียบคม ตรวจสอบโค้ดได้ดี ลองฝึกเขียนโค้ดที่อ่านง่าย เช่น ตั้งชื่อตัวแปรให้ชัดเจน ใส่คอมเมนต์ให้ผู้อื่นเข้าใจ และลองรีวิวโค้ดของเพื่อน ๆ เพื่อพัฒนาเพิ่มเติม",
+                    0.5: "ควรฝึกให้ชินกับ syntax, indentation และ error message ที่พบบ่อย ฝึกเขียนโปรแกรมที่มีข้อผิดพลาดแล้วลอง debug แก้ไขทีละจุด",
+                    0: "เริ่มจากสังเกตข้อผิดพลาดที่พบบ่อย เช่น ลืม colon, วางโค้ดผิด indentation หรือใช้ตัวแปรผิดชื่อ แล้วลองแก้ด้วยตนเอง"
+                }
+            };
+
+            return map[type][val];
+        }
+        function sendToGoogleForm(data) {
+            const formURL = "https://docs.google.com/forms/d/e/1FAIpQLScVGakPfbQg1VeiD18VmeWCfHh0aCHtZ6pAxGKEhD6cIpwmSQ/formResponse";
+            const formData = new FormData();
+
+            formData.append("entry.833541750", data.studentId);       // Student ID
+            formData.append("entry.1136940141", data.name);           // Name
+            formData.append("entry.1098093818", data.age);            // Age
+            formData.append("entry.1160059292", data.school);         // School
+            formData.append("entry.1224619485", data.language);       // Language
+            formData.append("entry.1320126566", data.logic);
+            formData.append("entry.205173494", data.math);
+            formData.append("entry.167276712", data.problem);
+            formData.append("entry.574875668", data.attention);
+            formData.append("entry.1069943174", data.abstract);
+            formData.append("entry.1717538983", `${data.logicRate} - ${getPlainThaiFeedback(data.logic, "logical")}`);
+            formData.append("entry.2112874979", `${data.mathRate} - ${getPlainThaiFeedback(data.math, "math")}`);
+            formData.append("entry.690221842", `${data.problemRate} - ${getPlainThaiFeedback(data.problem, "problem")}`);
+            formData.append("entry.761982831", `${data.attentionRate} - ${getPlainThaiFeedback(data.attention, "attention")}`);
+            formData.append("entry.1016481508", `${data.abstractRate} - ${getPlainThaiFeedback(data.abstract, "abstract")}`);
+
+            fetch(formURL, {
+                method: "POST",
+                mode: "no-cors",
+                body: formData
+            })
+                .then(() => alert("✅ Data sent to Google Form successfully!"))
+                .catch(() => alert("❌ Failed to submit. Please check your form and IDs."));
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            renderQuestions();
+        });
+    </script>
+</body>
+
+</html>

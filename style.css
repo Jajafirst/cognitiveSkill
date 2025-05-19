@@ -1,0 +1,81 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.quiz-container {
+    background-color: white;
+    width: 100%;
+    max-width: 600px; /* ปรับให้ใหญ่ขึ้นบน Laptop */
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+h2 {
+    text-align: center;
+    font-size: clamp(20px, 4vw, 26px);
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.question {
+    margin-bottom: 15px;
+    font-size: clamp(15px, 3.5vw, 17px);
+}
+
+.question label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #444;
+}
+
+.question input[type="radio"] {
+    margin-right: 6px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 18px;
+    width: 100%;
+    font-size: clamp(15px, 3.5vw, 17px);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+canvas {
+    margin-top: 30px;
+    max-width: 100%;
+}
+
+#resultText {
+    margin-top: 25px;
+    font-size: clamp(14px, 3.5vw, 16px);
+    color: #333;
+    line-height: 1.6;
+}
+
+ul {
+    padding-left: 20px;
+}
+
+/* Responsive: mobile ปรับ padding น้อยลง */
+@media (max-width: 480px) {
+    .quiz-container {
+        padding: 15px;
+    }
+}
