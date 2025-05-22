@@ -533,16 +533,16 @@
             formData.append("entry.1098093818", data.age);            // Age
             formData.append("entry.1160059292", data.school);         // School
             formData.append("entry.1224619485", data.language);       // Language
-            formData.append("entry.1320126566", data.logic);
-            formData.append("entry.205173494", data.math);
-            formData.append("entry.167276712", data.problem);
-            formData.append("entry.574875668", data.attention);
-            formData.append("entry.1069943174", data.abstract);
-            formData.append("entry.1717538983", `${data.logicRate} - ${getPlainThaiFeedback(data.logic, "logical")}`);
-            formData.append("entry.2112874979", `${data.mathRate} - ${getPlainThaiFeedback(data.math, "math")}`);
-            formData.append("entry.690221842", `${data.problemRate} - ${getPlainThaiFeedback(data.problem, "problem")}`);
-            formData.append("entry.761982831", `${data.attentionRate} - ${getPlainThaiFeedback(data.attention, "attention")}`);
-            formData.append("entry.1016481508", `${data.abstractRate} - ${getPlainThaiFeedback(data.abstract, "abstract")}`);
+            formData.append("entry.1320126566", data.problem);
+            formData.append("entry.205173494", data.abstract);
+            formData.append("entry.167276712", data.math);
+            formData.append("entry.574875668", data.logical);
+            formData.append("entry.1069943174", data.attention);
+            formData.append("entry.1717538983", `${data.problemRate} - ${getPlainThaiFeedback(data.problem, "problem")}`);
+            formData.append("entry.2112874979", `${data.abstractRate} - ${getPlainThaiFeedback(data.abstract, "abstract")}`);
+            formData.append("entry.690221842", `${data.mathRate} - ${getPlainThaiFeedback(data.math, "math")}`);
+            formData.append("entry.761982831", `${data.logicRate} - ${getPlainThaiFeedback(data.logic, "logical")}`);
+            formData.append("entry.1016481508", `${data.attentionRate} - ${getPlainThaiFeedback(data.attention, "attention")}`);
 
             fetch(formURL, {
                 method: "POST",
